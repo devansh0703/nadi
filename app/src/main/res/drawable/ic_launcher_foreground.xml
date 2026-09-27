@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Nadi launcher icon foreground: a heartbeat / ECG pulse.
+  "Nadi" means pulse, so the mark is the signal itself.
+
+  Geometry is kept inside the adaptive-icon safe zone (the centre 66dp of the
+  108dp canvas, i.e. x and y roughly 21..87) so no launcher mask clips it.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Glow underlay: wide, low-alpha copy of the same stroke -->
+    <path
+        android:pathData="M22,54 L38,54 L44,38 L55,74 L63,46 L69,54 L86,54"
+        android:strokeColor="#4000FF88"
+        android:strokeWidth="13"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:fillColor="#00000000" />
+
+    <!-- Primary pulse trace -->
+    <path
+        android:pathData="M22,54 L38,54 L44,38 L55,74 L63,46 L69,54 L86,54"
+        android:strokeColor="#FF00FF88"
+        android:strokeWidth="5"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:fillColor="#00000000" />
+
+    <!-- Origin pip, in the secondary brand blue -->
+    <path
+        android:pathData="M22,54 m-4,0 a4,4 0 1,0 8,0 a4,4 0 1,0 -8,0"
+        android:fillColor="#FF00AAFF" />
+</vector>

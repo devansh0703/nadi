@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Nadi launcher icon background.
+  Deep navy base matching the app's Material theme (background #0A0E27), with a
+  soft brand-green glow behind the pulse mark so the icon reads as "alive"
+  without any bitmap asset.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Base: diagonal navy gradient -->
+    <path android:pathData="M0,0h108v108h-108z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="linear"
+                android:startX="0"
+                android:startY="0"
+                android:endX="108"
+                android:endY="108">
+                <item android:color="#FF0A0E27" android:offset="0.0" />
+                <item android:color="#FF151B3E" android:offset="1.0" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Radiance: faint green halo centred on the pulse -->
+    <path android:pathData="M0,0h108v108h-108z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="radial"
+                android:centerX="54"
+                android:centerY="54"
+                android:gradientRadius="48">
+                <item android:color="#4000FF88" android:offset="0.0" />
+                <item android:color="#1A00AAFF" android:offset="0.55" />
+                <item android:color="#0000FF88" android:offset="1.0" />
+            </gradient>
+        </aapt:attr>
+    </path>
+</vector>

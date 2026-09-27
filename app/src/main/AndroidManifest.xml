@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <uses-feature
+        android:name="android.hardware.camera"
+        android:required="true" />
+    <uses-feature
+        android:name="android.hardware.camera.front"
+        android:required="false" />
+
+    <!-- Running dashboard: distance/route/pace. Optional, so rep counting
+         still installs on devices without a GPS chip. -->
+    <uses-feature
+        android:name="android.hardware.location.gps"
+        android:required="false" />
+
+    <uses-permission android:name="android.permission.CAMERA" />
+    <!-- Normal permission: required to register high-rate (>=200 Hz) IMU
+         listeners (SENSOR_DELAY_FASTEST) for seismocardiography/gyrocardiography. -->
+    <uses-permission android:name="android.permission.HIGH_SAMPLING_RATE_SENSORS" />
+    <!-- Runtime permission: step counter / step detector sensors. -->
+    <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
+    <!-- Runtime permissions: running distance / route / pace only. Requested
+         lazily when a run starts, never at launch. -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+
+    <!-- ================= Health Connect =================
+         Health Connect is where watches, chest straps and other health apps
+         deposit their data on Android. Declaring these lets Nadi read what a
+         paired device measured, and write its own measurements back so other
+         apps can see them. Every one is a runtime permission the user grants
+         in the Health Connect UI; none is requested at launch.
+
+         On Android 13 and below Health Connect is a separate app, so the
+         <queries> block below is what lets us see it at all.
+    =================================================== -->
+    <!-- Read device-sourced data -->
+    <uses-permission android:name="android.permission.health.READ_HEART_RATE" />
+    <uses-permission android:name="android.permission.health.READ_STEPS" />
+    <uses-permission android:name="android.permission.health.READ_DISTANCE" />
+    <uses-permission android:name="android.permission.health.READ_EXERCISE" />
+    <uses-permission android:name="android.permission.health.READ_TOTAL_CALORIES_BURNED" />
+    <!-- Write Nadi's own measurements back -->
+    <uses-permission android:name="android.permission.health.WRITE_HEART_RATE" />
+    <uses-permission android:name="android.permission.health.WRITE_DISTANCE" />
+    <uses-permission android:name="android.permission.health.WRITE_EXERCISE" />
+
+    <!-- Health Connect must be discoverable on API <= 33, where it ships as a
+         standalone app rather than part of the OS. -->
+    <queries>
+        <package android:name="com.google.android.apps.healthdata" />
+    </queries>
+
+    <!-- GenieX (Hexagon NPU / qairt) needs Android 8.1+ (minSdk 27) -->
+    <uses-sdk android:minSdkVersion="27" />
+
+
+    <application
+        android:name=".NadiApplication"
+        android:allowBackup="true"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.Nadi"
+        tools:targetApi="31">
+
+        <!-- Hexagon NPU (SNPE/HTP) device access. Since Android 12, vendor public
+             native libraries are opt-in for apps: without these declarations the
+             app's linker namespace cannot resolve libcdsprpc.so when the SNPE DSP
+             stubs (libSnpeHtpVxxStub.so) dlopen it, and runtime selection fails
+             with error 73 ("None of the selected runtime targets are supported").
+             Required for iQOO 15 (SM8850) exclusive NPU inference. -->
+        <uses-native-library android:name="libcdsprpc.so" android:required="true" />
+        <uses-native-library android:name="libadsprpc.so" android:required="false" />
+        <uses-native-library android:name="libsdsprpc.so" android:required="false" />
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:screenOrientation="portrait"
+            android:configChanges="orientation|screenSize"
+            android:theme="@style/Theme.Nadi">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- Health Connect permission rationale.
+             Android 14+ requires apps that use Health Connect to provide this
+             screen, and the Health Connect UI deep-links into it. -->
+        <activity
+            android:name=".health.HealthConnectRationaleActivity"
+            android:exported="true"
+            android:label="@string/app_name"
+            android:theme="@style/Theme.Nadi">
+            <intent-filter>
+                <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" />
+            </intent-filter>
+        </activity>
+
+        <!-- Alias so the Health Connect UI can find the rationale screen on
+             builds that look for the VIEW_PERMISSION_USAGE action instead. -->
+        <activity-alias
+            android:name="ViewPermissionUsageActivity"
+            android:exported="true"
+            android:targetActivity=".health.HealthConnectRationaleActivity"
+            android:permission="android.permission.START_VIEW_PERMISSION_USAGE">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW_PERMISSION_USAGE" />
+                <category android:name="android.intent.category.HEALTH_PERMISSIONS" />
+            </intent-filter>
+        </activity-alias>
+
+        <!-- MediaPipe model metadata -->
+        <meta-data
+            android:name="com.google.mlkit.vision.DEPENDENCIES"
+            android:value="face_mesh" />
+
+    </application>
+</manifest>

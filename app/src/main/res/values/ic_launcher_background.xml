@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Kept for the legacy <background android:drawable="@color/..."> form and for
+     any tooling that reads the colour; must match the Nadi theme background. -->
+<resources>
+    <color name="ic_launcher_background">#0A0E27</color>
+</resources>
