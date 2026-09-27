@@ -396,9 +396,11 @@ class WorkoutViewModel(application: Application) : AndroidViewModel(application)
     companion object {
         private const val TAG = "WorkoutViewModel"
         private const val MAX_HISTORY = 20
-        private const val AI_START_CADENCE = 140
-        private const val AI_PAUSE_CADENCE = 60
-        private const val AI_START_TICKS = 3
-        private const val AI_PAUSE_TICKS = 5
+        // Stride thresholds raised: casual movement no longer auto-starts a
+        // run, and a pause now needs a sustained drop rather than one slow tick.
+        private const val AI_START_CADENCE = 150
+        private const val AI_PAUSE_CADENCE = 55
+        private const val AI_START_TICKS = 4
+        private const val AI_PAUSE_TICKS = 6
     }
 }

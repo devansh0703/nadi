@@ -1,0 +1,81 @@
+NADI — 5-MINUTE PITCH (just read this out loud)
+
+[0:00 - THE HOOK]
+
+Okay, quick show of hands — how many of you own a smartwatch?
+
+Now keep your hand up if you actually wear it every day... Yeah. That's what I thought.
+
+We spend 15,000 rupees on a watch to tell us our heart rate, we wear it for 2 weeks, then it dies in a drawer next to our 2022 New Year resolutions.
+
+So we asked a stupid question: what if you didn't need the watch at all? What if your phone could just... look at you and know your heartbeat?
+
+That's Nadi. Nadi means "pulse" in Hindi. And that's literally what it does.
+
+[0:40 - THE MAGIC TRICK]
+
+Let me show you how stupid-simple this is. I open Nadi. I tap Heart. I look at my phone.
+
+That's it. No strap. No watch. No finger clip. I'm just... sitting here, being handsome, staring at my phone — and it's reading my pulse.
+
+How? Every time your heart beats, blood rushes to your face, and your skin absorbs a tiny bit more green light. You can't see it. I can't see it. But the camera can.
+
+Nadi tracks your forehead and cheeks 30 times a second, averages that green signal, runs it through a full DSP pipeline — normalization, Hamming window, FFT — finds the dominant frequency between 45 and 180 BPM, and then — here's the flex — a quantized INT8 neural net running ON the Hexagon NPU cleans up all the motion noise.
+
+Face tracking with MediaPipe. Signal math in native C++ with ARM Neon. AI refinement on the NPU. All in like 3 seconds. All on-device.
+
+It's basically a doctor, but make it selfie.
+
+And it doesn't just give you heart rate. It gives you stress from HRV, live waveform, signal quality — like "bro, move toward the window, your lighting is trash." Plus full history, saved on your phone.
+
+[2:00 - BUT WAIT, THERE'S A SECOND APP INSIDE]
+
+Here's where it gets unfair. Nadi is actually TWO apps in one.
+
+Tab two: Workout. And this one uses zero camera. Nothing. Nada. It's all sensors.
+
+You put your phone in your pocket and do push-ups. Squats. Sit-ups. Jumping jacks. Deadlift. Bench press. Overhead press. Nadi counts every rep from the accelerometer.
+
+It calibrates to YOU in the first 15 samples — learns your baseline, smooths the noise, then counts a rep only when the signal spikes, peaks, and falls back, with a cooldown so a bounce doesn't get double-counted. Push-ups on the Z-axis, squats on the Y-axis, barbell lifts with a gravity-tracking filter because heavy reps are slow and sexy.
+
+You know what's my favorite feature? The elliptical mode. It's just a timer. Start. Stop. Elapsed time. Because unlike every fitness app that makes up numbers, Nadi refuses to pretend it can measure what it can't. Honest app. Rare breed.
+
+And running? Oh, running is beautiful. GPS distance with haversine, live pace, route polyline with 5000 points, cadence from your bounce — a step is anything over 11.5 meters per second squared with 250ms spacing. And there's an AI mode that AUTO-STARTS when you start striding and AUTO-PAUSES when you stop to tie your shoe and rethink your life. Elapsed time freezes. No fake stats.
+
+[3:20 - THE PRIVACY MIC-DROP]
+
+Now, the part investors and your mom both love: privacy.
+
+Everything I just described? On. Device. No cloud. No account. No "we value your privacy" while uploading your face to a server in Virginia.
+
+Your face frames never leave the phone. Your accelerometer data never leaves. Your GPS route that looks like a drunk potato? Stays. On. Your. Phone.
+
+We built this NPU-or-nothing. If the Hexagon NPU isn't there, the app says "sorry, not supported" instead of silently falling back to some slow, leaky cloud workaround. That's a design principle, not a bug. Your body data is yours.
+
+[3:50 - THE FUTURE — WHERE THIS GOES]
+
+And we're just getting started. We're layering an on-device AI coach — Qwen running right on the same NPU, fully offline.
+
+Imagine: "Why is my heart rate higher today?" — and it answers from YOUR last 7 days, not WebMD telling you you're dying.
+
+"Make me a weekly plan, I have dumbbells, 3 days a week, 40 minutes." Done. Only exercises the app can actually count. Adaptive — "you crushed last week, +1 set, here's why."
+
+Food photo → "that's chole bhature, 550 to 650 calories, protein is crying, add paneer." Built for India — veg, non-veg, Jain, sattvic, budget tiers. Protein-gap tracking because let's be honest, vegetarian diets need help.
+
+Scan a blood report → pulls Hb, glucose, HbA1c, B12, Vitamin D. AQI-aware coaching — "AQI 310, bro, workout indoors today." Hindi + English first, then Tamil, Telugu, Bengali, Marathi. Elder-care mode with big text and voice-first. Wellness reports as PDFs you can WhatsApp to your mom or your doctor.
+
+All offline. All private. All on a phone.
+
+[4:45 - THE CLOSE]
+
+So here's the pitch in one line:
+
+Fitbits cost money. Subscriptions cost money. Trainers judge you.
+
+Nadi needs two things you already have: your face, and your pocket.
+
+Stare at your phone. Get your heart rate. Put it in your pocket. Get jacked. Stay private.
+
+Nadi. Your pulse. In your pocket.
+
+Thank you. I'm going to go for a run now — the app already auto-started it.

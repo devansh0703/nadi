@@ -36,6 +36,8 @@ import androidx.compose.ui.zIndex
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.nadi.health.camera.CameraManager
 import com.nadi.health.core.DeviceCapability
+import com.nadi.health.ui.charts.HeartAnalyticsSection
+import com.nadi.health.ui.theme.MetroHeroSurface
 import com.nadi.health.viewmodel.HeartRateViewModel
 import com.nadi.health.viewmodel.MeasurementStatus
 import com.nadi.health.vision.FaceTracker
@@ -200,7 +202,7 @@ fun MainScreen(
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
                             text = if(stressLevel.contains("Analyzing")) "Gathering data..." else stressLevel,
-                            color = MaterialTheme.colorScheme.secondary,
+                            color = MaterialTheme.colorScheme.primary,
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.Bold,
                             maxLines = 2,
@@ -217,7 +219,7 @@ fun MainScreen(
                         CircularProgressIndicator(
                             modifier = Modifier.size(24.dp),
                             strokeWidth = 2.dp,
-                            color = MaterialTheme.colorScheme.secondary
+                            color = MaterialTheme.colorScheme.primary
                         )
                     }
                 }
@@ -229,6 +231,22 @@ fun MainScreen(
             // 2b. Body Signals - phone-contact IMU physiology (respiration,
             // chest HR/HRV, tremor test, walking gait)
             ImuSection()
+
+            // 2c. Analytics — every chart derives from the live buffer above
+            HeartAnalyticsSection(
+                signalData = signalBuffer,
+                confidence = confidence,
+                heartRate = heartRate,
+                spo2 = spo2,
+                bloodPressure = bloodPressure,
+                currentPhase = when (status) {
+                    MeasurementStatus.INITIALIZING -> 0
+                    MeasurementStatus.NO_FACE -> 1
+                    MeasurementStatus.ACQUIRING, MeasurementStatus.TRACKING -> 2
+                    MeasurementStatus.MEASURING -> 3
+                    MeasurementStatus.COMPLETED -> 4
+                }
+            )
 
             // 3. BPM Count
             BPMCountSection(
@@ -256,42 +274,42 @@ fun BPMCountSection(
     heartRate: Float,
     modifier: Modifier = Modifier
 ) {
-    Card(
-        modifier = modifier,
-        colors = CardDefaults.cardColors(
-            containerColor = Color(0xFF1A1F3A).copy(alpha = 0.95f)
-        ),
-        shape = RoundedCornerShape(20.dp)
-    ) {
+    // The one coral hero card on this screen: the headline number.
+    MetroHeroSurface(modifier = modifier) {
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp),
+            modifier = Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.SpaceBetween
         ) {
-            Text(
-                text = "bpm count",
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Medium,
-                color = Color.White.copy(alpha = 0.7f)
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Default.Favorite,
+                    contentDescription = null,
+                    tint = Color.White.copy(alpha = 0.9f),
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(Modifier.size(7.dp))
+                Text(
+                    text = "BPM COUNT",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = Color.White.copy(alpha = 0.85f),
+                    letterSpacing = 1.4.sp
+                )
+            }
 
-            // Large BPM number
             Row(
                 verticalAlignment = Alignment.Bottom,
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 Text(
                     text = if (heartRate > 0) "${heartRate.toInt()}" else "--",
-                    fontSize = 36.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFF00FF88)
+                    style = MaterialTheme.typography.displayLarge,
+                    color = Color.White
                 )
                 Text(
                     text = "BPM",
-                    fontSize = 14.sp,
-                    color = Color.White.copy(alpha = 0.6f),
-                    modifier = Modifier.padding(bottom = 6.dp)
+                    style = MaterialTheme.typography.titleMedium,
+                    color = Color.White.copy(alpha = 0.8f),
+                    modifier = Modifier.padding(bottom = 10.dp)
                 )
             }
         }
@@ -308,7 +326,7 @@ fun HeartBeatGraphSection(
     Card(
         modifier = modifier,
         colors = CardDefaults.cardColors(
-            containerColor = Color(0xFF1A1F3A).copy(alpha = 0.95f)
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
         ),
         shape = RoundedCornerShape(20.dp)
     ) {
@@ -317,12 +335,25 @@ fun HeartBeatGraphSection(
                 .fillMaxSize()
                 .padding(16.dp)
         ) {
-            Text(
-                text = "heart beat graph",
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Medium,
-                color = Color.White.copy(alpha = 0.7f)
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Heartbeat",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = "LIVE PULSE",
+                    style = MaterialTheme.typography.labelSmall,
+                    letterSpacing = 1.2.sp,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+            Spacer(Modifier.height(10.dp))
 
             // 2. Info Row (Status + BPM)
             Row(
@@ -331,9 +362,9 @@ fun HeartBeatGraphSection(
                     .height(130.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                // Left: Status & Quality
+                // Left: Status & Quality (white sheet inside the tonal card)
                 ElevatedCard(
-                    colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                    colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface),
                     shape = RoundedCornerShape(16.dp),
                     modifier = Modifier.weight(1f).fillMaxHeight()
                 ) {
@@ -385,7 +416,7 @@ fun HeartBeatGraphSection(
 
                 // Right: BPM Count
                 ElevatedCard(
-                    colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                    colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface),
                     shape = RoundedCornerShape(16.dp),
                     modifier = Modifier.weight(0.8f).fillMaxHeight()
                 ) {
@@ -394,7 +425,7 @@ fun HeartBeatGraphSection(
                         verticalArrangement = Arrangement.Center,
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Text("HEART RATE", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                        Text("HEART RATE", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
 
                         Row(verticalAlignment = Alignment.Bottom) {
                             Text(
@@ -417,14 +448,14 @@ fun HeartBeatGraphSection(
 
             // 3. Heart Beat Graph
             ElevatedCard(
-                colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface),
                 shape = RoundedCornerShape(16.dp),
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f)
             ) {
                 Column(modifier = Modifier.padding(12.dp)) {
-                    Text("Live Pulse Signal", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelMedium)
+                    Text("Live Pulse Signal", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelMedium, letterSpacing = 1.sp)
                     Spacer(modifier = Modifier.height(8.dp))
                     GraphContent(signalData, confidence)
                 }
@@ -529,12 +560,12 @@ fun CameraControls(
         modifier = modifier,
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        // Switch Camera Button
+        // Switch Camera Button — white glass chips over the preview
         FilledTonalIconButton(
             onClick = { cameraManager.switchCamera() },
             colors = IconButtonDefaults.filledTonalIconButtonColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.8f),
-                contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                containerColor = Color.White.copy(alpha = 0.9f),
+                contentColor = MaterialTheme.colorScheme.primary
             ),
             modifier = Modifier.size(44.dp)
         ) {
@@ -550,15 +581,15 @@ fun CameraControls(
             FilledTonalIconButton(
                 onClick = { cameraManager.toggleFlash() },
                 colors = IconButtonDefaults.filledTonalIconButtonColors(
-                    containerColor = if (isFlashOn) MaterialTheme.colorScheme.tertiary.copy(alpha = 0.8f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.8f),
-                    contentColor = if (isFlashOn) MaterialTheme.colorScheme.onTertiary else MaterialTheme.colorScheme.onSurfaceVariant
+                    containerColor = if (isFlashOn) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.9f),
+                    contentColor = if (isFlashOn) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.primary
                 ),
                 modifier = Modifier.size(44.dp)
             ) {
                 Icon(
                     imageVector = if (isFlashOn) Icons.Default.FlashOn else Icons.Default.FlashOff,
                     contentDescription = "Toggle Flash",
-                    tint = if (isFlashOn) MaterialTheme.colorScheme.onTertiary else MaterialTheme.colorScheme.onSurfaceVariant
+                    tint = if (isFlashOn) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.primary
                 )
             }
         }
@@ -568,16 +599,17 @@ fun CameraControls(
 @Composable
 fun LightingWarningBanner(msg: String, modifier: Modifier = Modifier) {
     Card(
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.error.copy(alpha = 0.9f)),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
+        shape = RoundedCornerShape(50),
         modifier = modifier.padding(top = 48.dp)
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(Icons.Default.Warning, null, tint = MaterialTheme.colorScheme.onError, modifier = Modifier.size(16.dp))
+            Icon(Icons.Default.Warning, null, tint = MaterialTheme.colorScheme.onErrorContainer, modifier = Modifier.size(16.dp))
             Spacer(modifier = Modifier.width(8.dp))
-            Text(msg, color = MaterialTheme.colorScheme.onError, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+            Text(msg, color = MaterialTheme.colorScheme.onErrorContainer, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
         }
     }
 }

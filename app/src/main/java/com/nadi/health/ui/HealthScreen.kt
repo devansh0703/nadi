@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -36,6 +37,16 @@ import com.nadi.health.health.DeviceHeartRate
 import com.nadi.health.health.DeviceSession
 import com.nadi.health.health.HealthConnectManager
 import com.nadi.health.viewmodel.HealthViewModel
+import com.nadi.health.ui.charts.FlowStep
+import com.nadi.health.ui.charts.MetroBarChart
+import com.nadi.health.ui.charts.MetroBullet
+import com.nadi.health.ui.charts.MetroChartCard
+import com.nadi.health.ui.charts.MetroDotMatrix
+import com.nadi.health.ui.charts.MetroDonut
+import com.nadi.health.ui.charts.MetroLegend
+import com.nadi.health.ui.charts.MetroStepFlow
+import com.nadi.health.ui.charts.MetroTimeline
+import com.nadi.health.ui.theme.MetroHeader
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -80,6 +91,16 @@ fun HealthScreen(vm: HealthViewModel = viewModel()) {
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         HeaderCard()
+
+        // User flow: how a reading on your watch reaches this screen
+        ConnectFlowCard(
+            step = when {
+                state.availability != HealthConnectManager.Availability.AVAILABLE -> 0
+                !state.hasAnyAccess -> 1
+                !state.hasFullAccess -> 2
+                else -> 3
+            }
+        )
 
         state.message?.let { message ->
             InfoCard(message, onDismiss = { vm.dismissMessage() })
@@ -166,37 +187,13 @@ fun HealthScreen(vm: HealthViewModel = viewModel()) {
 
 @Composable
 private fun HeaderCard() {
-    ElevatedCard(
-        colors = CardDefaults.elevatedCardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
-        ),
-        shape = RoundedCornerShape(16.dp),
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Column(modifier = Modifier.fillMaxWidth().padding(14.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    "Health",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-                Spacer(Modifier.width(8.dp))
-                Text(
-                    "Health Connect · on-device store",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            Spacer(Modifier.height(6.dp))
-            Text(
-                "Your readings and workouts are stored on this phone first. Health " +
-                    "Connect is how watches, bands and other health apps share data " +
-                    "with Nadi — and how Nadi shares back.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }
+    MetroHeader(
+        title = "Health",
+        eyebrow = "Health Connect · on-device store",
+        blurb = "Your readings and workouts are stored on this phone first. Health " +
+            "Connect is how watches, bands and other health apps share data " +
+            "with Nadi — and how Nadi shares back."
+    )
 }
 
 @Composable
@@ -272,6 +269,50 @@ private fun LocalCard(
         StatRow("Distance today", formatMeters(state.local.distanceTodayM))
 
         Spacer(Modifier.height(10.dp))
+        MetroChartCard(
+            title = "Today at a glance",
+            subtitle = "on-device store"
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                MetroBullet(
+                    valueNorm = state.local.averageBpmToday.coerceIn(0f, 200f) / 200f,
+                    bands = listOf(0.3f, 0.5f),
+                    targetNorm = null,
+                    caption = if (state.local.averageBpmToday > 0f) {
+                        "Average ${state.local.averageBpmToday.toInt()} bpm · resting band 60–100"
+                    } else {
+                        "No heart-rate reading yet today"
+                    }
+                )
+                if (state.local.readingCount + state.local.sessionCount > 0) {
+                    MetroDonut(
+                        segments = listOf(
+                            state.local.readingCount.toFloat().coerceAtLeast(0.001f),
+                            state.local.sessionCount.toFloat().coerceAtLeast(0.001f)
+                        ),
+                        colors = listOf(
+                            MaterialTheme.colorScheme.primary,
+                            MaterialTheme.colorScheme.tertiary
+                        ),
+                        modifier = Modifier
+                            .align(Alignment.CenterHorizontally)
+                            .size(92.dp),
+                        strokeWidth = 12.dp,
+                        centerText = "${state.local.readingCount + state.local.sessionCount}",
+                        centerSubtext = "rows"
+                    )
+                    MetroLegend(
+                        items = listOf(
+                            "Readings" to MaterialTheme.colorScheme.primary,
+                            "Workouts" to MaterialTheme.colorScheme.tertiary
+                        ),
+                        modifier = Modifier.align(Alignment.CenterHorizontally)
+                    )
+                }
+            }
+        }
+
+        Spacer(Modifier.height(10.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Button(onClick = onSync, enabled = !state.loading) {
                 Text("Sync to Health Connect")
@@ -305,6 +346,23 @@ private fun DeviceCard(
         StatRow("Steps today", stepsToday?.toString() ?: "—")
         StatRow("Distance today", distanceTodayM?.let(::formatMeters) ?: "—")
 
+        if (stepsToday != null && stepsToday > 0L) {
+            Spacer(Modifier.height(10.dp))
+            MetroChartCard(
+                title = "Steps vs 10,000",
+                subtitle = "each dot is 100 steps"
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    MetroDotMatrix(
+                        filled = ((stepsToday / 100L).toInt()).coerceAtMost(100),
+                        total = 100,
+                        columns = 20,
+                        label = { filled -> "$stepsToday today · $filled% of goal" }
+                    )
+                }
+            }
+        }
+
         Spacer(Modifier.height(10.dp))
         Text(
             "Latest heart rate",
@@ -323,6 +381,22 @@ private fun DeviceCard(
                     "${formatTime(sample.timestamp)}  ·  ${shortOrigin(sample.origin)}",
                     "${sample.bpm.toInt()} bpm"
                 )
+            }
+
+            val recentHr = hr.take(8).reversed()
+            if (recentHr.size >= 2) {
+                Spacer(Modifier.height(10.dp))
+                MetroChartCard(
+                    title = "Heart-rate samples",
+                    subtitle = "bpm · oldest to newest"
+                ) {
+                    MetroBarChart(
+                        values = recentHr.map { it.bpm.toFloat() },
+                        labels = recentHr.map { formatTime(it.timestamp) },
+                        highlightIndex = recentHr.lastIndex,
+                        barHeight = 64.dp
+                    )
+                }
             }
         }
 
@@ -345,7 +419,44 @@ private fun DeviceCard(
                     formatDurationShort(session.durationSec)
                 )
             }
+
+            Spacer(Modifier.height(10.dp))
+            MetroChartCard(
+                title = "Session timeline",
+                subtitle = "written by other apps · newest last"
+            ) {
+                MetroTimeline(
+                    items = sessions.take(4).reversed().map { session ->
+                        formatDay(session.startMs) to
+                            "${session.title} · ${formatDurationShort(session.durationSec)}"
+                    },
+                    highlightLast = true
+                )
+            }
         }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// User flow diagram
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** The whole Health Connect journey as a numbered flow with live position. */
+@Composable
+private fun ConnectFlowCard(step: Int) {
+    MetroChartCard(
+        title = "How data reaches Nadi",
+        subtitle = "device → Health Connect → this phone"
+    ) {
+        MetroStepFlow(
+            steps = listOf(
+                FlowStep("Install & update Health Connect", "Ships with Android 14+"),
+                FlowStep("Grant Nadi access", "Choose which data types Nadi may read"),
+                FlowStep("Read your devices", "Watch, band and other apps appear here"),
+                FlowStep("Sync back", "Nadi writes its own measurements out")
+            ),
+            current = step
+        )
     }
 }
 

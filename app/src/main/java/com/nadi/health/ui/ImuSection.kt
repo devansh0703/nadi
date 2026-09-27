@@ -18,6 +18,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.nadi.health.ui.charts.MetroBullet
+import com.nadi.health.ui.charts.MetroChartCard
+import com.nadi.health.ui.charts.MetroGauge
+import com.nadi.health.ui.charts.MetroHistogram
+import com.nadi.health.ui.charts.MetroPipeline
+import com.nadi.health.ui.charts.MetroSparkline
+import com.nadi.health.ui.charts.sample
 import com.nadi.health.viewmodel.ImuViewModel
 
 /**
@@ -66,9 +73,10 @@ fun ImuSection() {
                 )
                 Spacer(Modifier.width(8.dp))
                 Text(
-                    "phone-contact · IMU",
+                    "PHONE-CONTACT · IMU",
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    letterSpacing = 1.1.sp,
+                    color = MaterialTheme.colorScheme.primary
                 )
             }
 
@@ -127,6 +135,22 @@ fun ImuSection() {
                         label = "Respiration"
                     )
                     WaveChart(respirationWave, MaterialTheme.colorScheme.tertiary)
+                    Spacer(Modifier.height(8.dp))
+                    MetroChartCard(
+                        title = "Breathing vs rest band",
+                        subtitle = "12–20 breaths/min is the adult resting range"
+                    ) {
+                        MetroBullet(
+                            valueNorm = respiration / 30f,
+                            bands = listOf(12f / 30f, 20f / 30f),
+                            targetNorm = null,
+                            caption = if (respiration > 0) {
+                                "$respiration breaths/min · band 12–20"
+                            } else {
+                                "Hold still — waiting for a clean breathing cycle"
+                            }
+                        )
+                    }
                 }
                 ImuViewModel.Mode.CARDIO -> {
                     BigMetric(
@@ -139,6 +163,32 @@ fun ImuSection() {
                         MiniStat("RMSSD", if (imuRmssd > 0f) "${imuRmssd.toInt()} ms" else "--")
                     }
                     WaveChart(cardioWave, MaterialTheme.colorScheme.primary)
+                    Spacer(Modifier.height(8.dp))
+                    MetroChartCard(
+                        title = "Chest HR vs resting band",
+                        subtitle = "60–100 bpm at rest · seismo/gyro trace"
+                    ) {
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            MetroBullet(
+                                valueNorm = imuHr / 200f,
+                                bands = listOf(0.3f, 0.5f),
+                                targetNorm = null,
+                                caption = if (imuHr > 0) {
+                                    "$imuHr bpm · band 60–100"
+                                } else {
+                                    "Press the phone against your chest to read a pulse"
+                                }
+                            )
+                            if (cardioWave.size >= 2) {
+                                MetroSparkline(
+                                    points = sample(cardioWave, 60),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(40.dp)
+                                )
+                            }
+                        }
+                    }
                 }
                 ImuViewModel.Mode.TREMOR -> {
                     if (tremorProgress > 0f && tremorProgress < 1f) {
@@ -167,6 +217,47 @@ fun ImuSection() {
                             Text(tremorClass, style = MaterialTheme.typography.bodyMedium)
                         }
                         WaveChart(tremorWave, MaterialTheme.colorScheme.secondary)
+                        Spacer(Modifier.height(8.dp))
+                        MetroChartCard(
+                            title = "Tremor spectrum",
+                            subtitle = "10 s capture · frequency + amplitude"
+                        ) {
+                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(14.dp)
+                                ) {
+                                    MetroGauge(
+                                        fraction = tremorHz / 12f,
+                                        valueText = if (tremorHz > 0f) {
+                                            "%.1f".format(tremorHz)
+                                        } else {
+                                            "--"
+                                        },
+                                        label = "Hz",
+                                        modifier = Modifier.size(84.dp)
+                                    )
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        MetroBullet(
+                                            valueNorm = tremorMg / 500f,
+                                            bands = emptyList(),
+                                            targetNorm = null,
+                                            caption = "Peak amplitude " +
+                                                if (tremorMg > 0f) "%.0f mg".format(tremorMg)
+                                                else "—"
+                                        )
+                                    }
+                                }
+                                if (tremorWave.size >= 4) {
+                                    MetroHistogram(
+                                        values = tremorWave,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(46.dp)
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
                 ImuViewModel.Mode.OFF -> {
@@ -179,6 +270,21 @@ fun ImuSection() {
                     )
                     if (tremorWave.isNotEmpty()) {
                         WaveChart(tremorWave, MaterialTheme.colorScheme.secondary)
+                    }
+                    Spacer(Modifier.height(10.dp))
+                    MetroChartCard(
+                        title = "Signal path",
+                        subtitle = "how the IMU becomes a number"
+                    ) {
+                        MetroPipeline(
+                            nodes = listOf(
+                                "Accel / gyro",
+                                "Band-pass filter",
+                                "Peak or FFT",
+                                "Confidence gate",
+                                "Breaths · BPM · Hz"
+                            )
+                        )
                     }
                 }
             }

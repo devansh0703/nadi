@@ -17,8 +17,15 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.nadi.health.viewmodel.WorkoutViewModel
+import com.nadi.health.ui.charts.FlowStep
+import com.nadi.health.ui.charts.MetroBullet
+import com.nadi.health.ui.charts.MetroChartCard
+import com.nadi.health.ui.charts.MetroGauge
+import com.nadi.health.ui.charts.MetroPhaseStrip
+import com.nadi.health.ui.charts.MetroStepFlow
 import com.nadi.health.workout.Exercise
 
 /**
@@ -65,9 +72,10 @@ fun RunSection(vm: WorkoutViewModel, exercise: Exercise) {
                 )
                 Spacer(Modifier.width(8.dp))
                 Text(
-                    if (mode == WorkoutViewModel.RunMode.AI) "AI · cadence" else "manual",
+                    if (mode == WorkoutViewModel.RunMode.AI) "AI · CADENCE" else "MANUAL",
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    letterSpacing = 1.1.sp,
+                    color = MaterialTheme.colorScheme.primary
                 )
             }
             Spacer(Modifier.height(4.dp))
@@ -79,6 +87,21 @@ fun RunSection(vm: WorkoutViewModel, exercise: Exercise) {
             Spacer(Modifier.height(12.dp))
 
             if (!started) {
+                MetroChartCard(
+                    title = "Run flow",
+                    subtitle = "permission → GPS → run → save"
+                ) {
+                    MetroStepFlow(
+                        steps = listOf(
+                            FlowStep("Location access", "Requested only when you start"),
+                            FlowStep("GPS lock", "Route appears after a few fixes"),
+                            FlowStep("Run", "Manual start, or cadence in AI mode"),
+                            FlowStep("Finish & save", "Distance, pace and route stored")
+                        ),
+                        current = 0
+                    )
+                }
+                Spacer(Modifier.height(10.dp))
                 Button(
                     onClick = {
                         val fine = ContextCompat.checkSelfPermission(
@@ -125,6 +148,44 @@ fun RunSection(vm: WorkoutViewModel, exercise: Exercise) {
                     RunStat("Pace", formatPace(paceSecPerKm), Modifier.weight(1f))
                     RunStat("Cadence", if (cadence > 0) "$cadence spm" else "--",
                         Modifier.weight(1f))
+                }
+
+                Spacer(Modifier.height(10.dp))
+                MetroPhaseStrip(
+                    phases = listOf("Permission", "GPS lock", "Running", "Saved"),
+                    current = if (mode == WorkoutViewModel.RunMode.AI && !runActive) 1 else 2
+                )
+
+                if (started && cadence > 0) {
+                    Spacer(Modifier.height(10.dp))
+                    MetroChartCard(
+                        title = "Stride cadence",
+                        subtitle = "auto start ≥ 150 spm · auto pause ≤ 55 spm"
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(14.dp)
+                        ) {
+                            MetroGauge(
+                                fraction = cadence / 180f,
+                                valueText = "$cadence",
+                                label = "spm",
+                                modifier = Modifier.size(84.dp)
+                            )
+                            Column(modifier = Modifier.weight(1f)) {
+                                MetroBullet(
+                                    valueNorm = cadence / 200f,
+                                    bands = listOf(0.275f, 0.75f),
+                                    targetNorm = null,
+                                    caption = if (runActive) {
+                                        "Stride detected — the run is recording"
+                                    } else {
+                                        "Waiting for your stride to cross the start gate…"
+                                    }
+                                )
+                            }
+                        }
+                    }
                 }
 
                 Spacer(Modifier.height(10.dp))

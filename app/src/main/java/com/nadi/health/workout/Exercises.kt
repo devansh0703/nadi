@@ -41,7 +41,7 @@ data class Exercise(
     val emoji: String,
     val kind: WorkoutKind,
     val axis: Axis = Axis.Z,
-    val threshold: Float = 0.4f,
+    val threshold: Float = 0.65f,
     val cooldownMs: Long = 700L,
     /** Placement/carry hint shown while the session runs. */
     val hint: String = "",
@@ -59,7 +59,7 @@ object ExerciseCatalog {
             emoji = "\uD83D\uDCAA",
             kind = WorkoutKind.REP_SENSOR,
             axis = Axis.Z,
-            threshold = 0.4f,
+            threshold = 0.65f,
             cooldownMs = 600L,
             hint = "Place the phone on the floor under your chest, screen up."
         ),
@@ -69,7 +69,7 @@ object ExerciseCatalog {
             emoji = "\uD83D\uDD25",
             kind = WorkoutKind.REP_SENSOR,
             axis = Axis.Z,
-            threshold = 0.5f,
+            threshold = 0.8f,
             cooldownMs = 800L,
             hint = "Rest the phone flat on your stomach and curl through the rep."
         ),
@@ -79,7 +79,7 @@ object ExerciseCatalog {
             emoji = "\uD83E\uDDB5",
             kind = WorkoutKind.REP_SENSOR,
             axis = Axis.Y,
-            threshold = 0.35f,
+            threshold = 0.55f,
             cooldownMs = 700L,
             hint = "Phone in a front pocket, held vertically against your body."
         ),
@@ -89,8 +89,8 @@ object ExerciseCatalog {
             emoji = "\u2B50",
             kind = WorkoutKind.REP_SENSOR,
             axis = Axis.Y,
-            threshold = 0.6f,
-            cooldownMs = 400L,
+            threshold = 0.9f,
+            cooldownMs = 500L,
             hint = "Phone in a pocket or in your hand - keep the carry consistent."
         ),
 
@@ -101,7 +101,7 @@ object ExerciseCatalog {
             emoji = "\uD83C\uDFCB",
             kind = WorkoutKind.BARBELL,
             axis = Axis.Y,
-            threshold = 0.5f,
+            threshold = 0.8f,
             cooldownMs = 900L,
             hint = "Phone in a pocket on the leg that drives the lift."
         ),
@@ -111,7 +111,7 @@ object ExerciseCatalog {
             emoji = "\uD83D\uDE4C",
             kind = WorkoutKind.BARBELL,
             axis = Axis.Y,
-            threshold = 0.4f,
+            threshold = 0.65f,
             cooldownMs = 800L,
             hint = "Phone in a chest pocket, screen facing you."
         ),
@@ -121,7 +121,7 @@ object ExerciseCatalog {
             emoji = "\uD83D\uDECC",
             kind = WorkoutKind.BARBELL,
             axis = Axis.Z,
-            threshold = 0.4f,
+            threshold = 0.65f,
             cooldownMs = 900L,
             hint = "Phone resting on the chest or in a pocket, screen up."
         ),

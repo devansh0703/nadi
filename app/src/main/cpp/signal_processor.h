@@ -25,13 +25,17 @@ private:
 
     int mBufferSize;
     float mSamplingRate;
-    std::vector<float> mRawBuffer;
+    std::vector<float> mRawBuffer;   // ring storage, capacity = mBufferSize
     std::vector<long> mTimeBuffer;
+    int mHead = 0;   // next write index
+    int mCount = 0;  // valid samples
 
-    // FFT resources
+    // FFT resources (reused, zero-alloc in hot path)
     kiss_fft_cfg mFftCfg;
     std::vector<kiss_fft_cpx> mFftIn;
     std::vector<kiss_fft_cpx> mFftOut;
+    std::vector<float> mWork;    // scratch for normalize+window
+    std::vector<float> mWindow;  // precomputed Hamming window
 
     // Helpers
     void normalizeBuffer(const std::vector<float>& input, std::vector<float>& output);

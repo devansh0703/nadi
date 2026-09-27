@@ -217,8 +217,9 @@ class RunTracker(
         private const val MIN_UPDATE_DISTANCE_M = 1f
         private const val MAX_ROUTE_POINTS = 5000
         private const val ACCURACY_REJECT_M = 35f
-        private const val STEP_ACCEL_THRESHOLD = 11.5f
-        private const val STEP_MIN_INTERVAL_MS = 250L
+        // Raised so pocket jitter and minor shakes don't register as steps.
+        private const val STEP_ACCEL_THRESHOLD = 13f
+        private const val STEP_MIN_INTERVAL_MS = 300L
         private const val CADENCE_WINDOW_MS = 10_000L
 
         /** Great-circle distance in metres. */

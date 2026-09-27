@@ -16,6 +16,19 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.nadi.health.viewmodel.WorkoutViewModel
+import com.nadi.health.ui.charts.FlowStep
+import com.nadi.health.ui.charts.MetroBarChart
+import com.nadi.health.ui.charts.MetroBullet
+import com.nadi.health.ui.charts.MetroChartCard
+import com.nadi.health.ui.charts.MetroDonut
+import com.nadi.health.ui.charts.MetroHysteresisDiagram
+import com.nadi.health.ui.charts.MetroLegend
+import com.nadi.health.ui.charts.MetroPhaseStrip
+import com.nadi.health.ui.charts.MetroSlope
+import com.nadi.health.ui.charts.MetroStepFlow
+import com.nadi.health.ui.charts.MetroTimeline
+import com.nadi.health.ui.theme.MetroHeader
+import com.nadi.health.ui.theme.MetroSectionHeader
 import com.nadi.health.workout.Exercise
 import com.nadi.health.workout.WorkoutKind
 import java.text.SimpleDateFormat
@@ -31,7 +44,11 @@ import java.util.Locale
  * session and running opens the separate run screen (see [RunSection]).
  */
 @Composable
-fun WorkoutScreen(vm: WorkoutViewModel = viewModel()) {
+fun WorkoutScreen(
+    vm: WorkoutViewModel = viewModel(),
+    pendingExerciseId: String? = null,
+    onPendingConsumed: () -> Unit = {}
+) {
     val phase by vm.phase.collectAsState()
     val selected by vm.selected.collectAsState()
     val reps by vm.reps.collectAsState()
@@ -40,6 +57,18 @@ fun WorkoutScreen(vm: WorkoutViewModel = viewModel()) {
     val signalLevel by vm.signalLevel.collectAsState()
     val error by vm.error.collectAsState()
     val history by vm.history.collectAsState()
+
+    // AI → Workout flow: a plan that named an exercise lands here and opens
+    // directly on the READY phase for that exercise.
+    LaunchedEffect(pendingExerciseId) {
+        val id = pendingExerciseId ?: return@LaunchedEffect
+        val exercise = vm.exercises.firstOrNull { it.id == id }
+        if (exercise != null) {
+            if (exercise.kind == com.nadi.health.workout.WorkoutKind.RUN) vm.prepareRun(exercise)
+            else vm.select(exercise)
+        }
+        onPendingConsumed()
+    }
 
     Column(
         modifier = Modifier
@@ -50,6 +79,9 @@ fun WorkoutScreen(vm: WorkoutViewModel = viewModel()) {
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         HeaderCard()
+
+        // User flow: where you are in the pick → ready → active → save path
+        WorkoutFlowCard(phase)
 
         error?.let { message ->
             ErrorCard(message, onDismiss = { vm.clearError() })
@@ -82,6 +114,7 @@ fun WorkoutScreen(vm: WorkoutViewModel = viewModel()) {
 
             WorkoutViewModel.Phase.DONE -> SummarySection(
                 record = history.firstOrNull(),
+                history = history,
                 onNewWorkout = { vm.discard() }
             )
         }
@@ -94,36 +127,12 @@ fun WorkoutScreen(vm: WorkoutViewModel = viewModel()) {
 
 @Composable
 private fun HeaderCard() {
-    ElevatedCard(
-        colors = CardDefaults.elevatedCardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
-        ),
-        shape = RoundedCornerShape(16.dp),
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Column(modifier = Modifier.fillMaxWidth().padding(14.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    "Workout",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-                Spacer(Modifier.width(8.dp))
-                Text(
-                    "sensor-only · no camera",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            Spacer(Modifier.height(6.dp))
-            Text(
-                "Reps are detected from phone acceleration on the x, y or z axis. " +
-                    "Place or carry the phone the same way for every rep or the count drifts.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }
+    MetroHeader(
+        title = "Workout",
+        eyebrow = "sensor-only · no camera",
+        blurb = "Reps are detected from phone acceleration on the x, y or z axis. " +
+            "Place or carry the phone the same way for every rep or the count drifts."
+    )
 }
 
 @Composable
@@ -152,15 +161,7 @@ private fun ErrorCard(message: String, onDismiss: () -> Unit) {
 
 @Composable
 private fun SectionHeader(title: String, subtitle: String) {
-    Row(verticalAlignment = Alignment.Bottom) {
-        Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-        Spacer(Modifier.width(8.dp))
-        Text(
-            subtitle,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    }
+    MetroSectionHeader(title = title, subtitle = subtitle)
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -190,6 +191,7 @@ private fun ExercisePicker(
         Spacer(Modifier.height(4.dp))
         SectionHeader("History", "this session")
         history.forEach { record -> HistoryRow(record) }
+        SessionStatsCard(history)
     }
 }
 
@@ -230,8 +232,18 @@ private fun ExerciseTile(
             .clickable(onClick = onClick)
     ) {
         Column(modifier = Modifier.fillMaxWidth().padding(12.dp)) {
-            Text(exercise.emoji, style = MaterialTheme.typography.headlineSmall)
-            Spacer(Modifier.height(6.dp))
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .background(
+                        MaterialTheme.colorScheme.primaryContainer,
+                        RoundedCornerShape(14.dp)
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(exercise.emoji, style = MaterialTheme.typography.titleLarge)
+            }
+            Spacer(Modifier.height(10.dp))
             Text(
                 exercise.name,
                 style = MaterialTheme.typography.titleSmall,
@@ -319,6 +331,11 @@ private fun ReadySection(exercise: Exercise?, onStart: () -> Unit, onBack: () ->
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+            MetroPhaseStrip(
+                phases = listOf("Pick", "Ready", "Active", "Saved"),
+                current = 1
+            )
+            Spacer(Modifier.height(14.dp))
             Text(exercise.emoji, style = MaterialTheme.typography.displaySmall)
             Spacer(Modifier.height(8.dp))
             Text(
@@ -349,6 +366,30 @@ private fun ReadySection(exercise: Exercise?, onStart: () -> Unit, onBack: () ->
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+            }
+
+            if (exercise.kind == WorkoutKind.REP_SENSOR || exercise.kind == WorkoutKind.BARBELL) {
+                Spacer(Modifier.height(14.dp))
+                MetroChartCard(
+                    title = "Rep gate · ${exercise.threshold}",
+                    subtitle = "peak must clear the line · release at 40%"
+                ) {
+                    Column {
+                        MetroHysteresisDiagram(
+                            threshold = exercise.threshold,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(92.dp)
+                        )
+                        Spacer(Modifier.height(6.dp))
+                        Text(
+                            "${exercise.cooldownMs} ms cooldown between reps — jitter " +
+                                "below the line never counts.",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
             }
 
             Spacer(Modifier.height(16.dp))
@@ -466,6 +507,25 @@ private fun RepSection(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
+            Spacer(Modifier.height(14.dp))
+            MetroChartCard(
+                title = "Detection telemetry",
+                subtitle = "movement against this exercise's rep gate"
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    MetroBullet(
+                        valueNorm = signalLevel.coerceIn(0f, 1f),
+                        bands = listOf(0.33f, 0.66f),
+                        targetNorm = exercise.threshold.coerceIn(0f, 1f),
+                        caption = "Threshold ${exercise.threshold} · cooldown ${exercise.cooldownMs} ms"
+                    )
+                    MetroPhaseStrip(
+                        phases = listOf("Pick", "Ready", "Active", "Saved"),
+                        current = 2
+                    )
+                }
+            }
+
             Spacer(Modifier.height(16.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Button(onClick = { vm.finish() }, modifier = Modifier.weight(1f)) {
@@ -505,6 +565,11 @@ private fun TimedSection(
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+            Spacer(Modifier.height(10.dp))
+            MetroPhaseStrip(
+                phases = listOf("Pick", "Ready", "Active", "Saved"),
+                current = 2
+            )
             Spacer(Modifier.height(16.dp))
             Text(
                 formatDuration(elapsedSec),
@@ -530,6 +595,7 @@ private fun TimedSection(
 @Composable
 private fun SummarySection(
     record: WorkoutViewModel.WorkoutRecord?,
+    history: List<WorkoutViewModel.WorkoutRecord>,
     onNewWorkout: () -> Unit
 ) {
     ElevatedCard(
@@ -565,6 +631,43 @@ private fun SummarySection(
                         StatBlock("Reps", "${record.reps}", Modifier.weight(1f))
                     }
                 }
+
+                // This session vs the previous one, on the metric that matters
+                if (history.size >= 2) {
+                    val previous = history[1]
+                    Spacer(Modifier.height(14.dp))
+                    MetroChartCard(
+                        title = "Vs your last session",
+                        subtitle = if (record.isCardio) "duration, minutes" else "reps"
+                    ) {
+                        MetroSlope(
+                            beforeLabel = previous.name.take(12),
+                            before = if (record.isCardio) previous.seconds / 60f
+                            else previous.reps.toFloat(),
+                            afterLabel = record.name.take(12),
+                            after = if (record.isCardio) record.seconds / 60f
+                            else record.reps.toFloat(),
+                            betterWhenHigher = true
+                        )
+                    }
+                }
+
+                Spacer(Modifier.height(14.dp))
+                MetroChartCard(
+                    title = "Session timeline",
+                    subtitle = "saved on this phone"
+                ) {
+                    MetroTimeline(
+                        items = history.take(4).reversed().map { saved ->
+                            SimpleDateFormat("HH:mm", Locale.getDefault())
+                                .format(Date(saved.timestamp)) to
+                                "${saved.name} · " +
+                                if (saved.isCardio) formatDistance(saved.distanceM)
+                                else "${saved.reps} reps"
+                        },
+                        highlightLast = true
+                    )
+                }
             }
 
             Spacer(Modifier.height(16.dp))
@@ -586,6 +689,78 @@ private fun StatBlock(label: String, value: String, modifier: Modifier = Modifie
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold
         )
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// User flow + session charts
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** The whole workout journey as one numbered flow, tracking the live phase. */
+@Composable
+private fun WorkoutFlowCard(phase: WorkoutViewModel.Phase) {
+    MetroChartCard(
+        title = "Your flow",
+        subtitle = "pick → ready → active → save"
+    ) {
+        MetroStepFlow(
+            steps = listOf(
+                FlowStep("Pick an exercise", "Tiles grouped by sensor mode"),
+                FlowStep("Check placement", "Put the phone where the hint says"),
+                FlowStep("Calibrate", "Half a second of stillness sets the baseline"),
+                FlowStep("Count reps", "Rep gate + cooldown filter every jitter"),
+                FlowStep("Save & review", "Session lands in history and the store")
+            ),
+            current = when (phase) {
+                WorkoutViewModel.Phase.SELECT -> 0
+                WorkoutViewModel.Phase.READY -> 1
+                WorkoutViewModel.Phase.ACTIVE -> 3
+                WorkoutViewModel.Phase.DONE -> 4
+            }
+        )
+    }
+}
+
+/** Aggregate charts over everything saved this session. */
+@Composable
+private fun SessionStatsCard(history: List<WorkoutViewModel.WorkoutRecord>) {
+    MetroChartCard(
+        title = "Session stats",
+        subtitle = "chronological · reps or minutes"
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            val recent = history.take(6).reversed()
+            MetroBarChart(
+                values = recent.map {
+                    if (it.isCardio) it.seconds / 60f else it.reps.toFloat()
+                },
+                labels = recent.map { it.name.take(9) },
+                highlightIndex = recent.lastIndex,
+                barHeight = 72.dp
+            )
+            val cardio = history.count { it.isCardio }.toFloat().coerceAtLeast(0.001f)
+            val floor = history.count { !it.isCardio }.toFloat().coerceAtLeast(0.001f)
+            MetroDonut(
+                segments = listOf(cardio, floor),
+                colors = listOf(
+                    MaterialTheme.colorScheme.primary,
+                    MaterialTheme.colorScheme.tertiary
+                ),
+                modifier = Modifier
+                    .align(Alignment.CenterHorizontally)
+                    .size(96.dp),
+                strokeWidth = 12.dp,
+                centerText = "${history.size}",
+                centerSubtext = "sessions"
+            )
+            MetroLegend(
+                items = listOf(
+                    "Cardio" to MaterialTheme.colorScheme.primary,
+                    "Rep & lift" to MaterialTheme.colorScheme.tertiary
+                ),
+                modifier = Modifier.align(Alignment.CenterHorizontally)
+            )
+        }
     }
 }
 

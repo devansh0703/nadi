@@ -184,7 +184,9 @@ class RepCountEngine(
             if (delta > peak) peak = delta
             wasAbove = true
         } else if (wasAbove && delta < threshold * 0.4f) {
-            if (now - lastRepMs > cooldownMs && peak > threshold * 1.2f) {
+            // Peak gate raised from 1.2x to 1.4x: a brief jerk that merely
+            // crosses the threshold no longer counts as a rep.
+            if (now - lastRepMs > cooldownMs && peak > threshold * 1.4f) {
                 lastRepMs = now
                 reps++
                 listener.onRep(reps)

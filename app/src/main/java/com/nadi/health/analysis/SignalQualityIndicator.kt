@@ -134,9 +134,9 @@ class SignalQualityIndicator {
 }
 
 enum class SignalQuality(val displayName: String, val color: Long) {
-    EXCELLENT("Excellent", 0xFF00FF88),
-    GOOD("Good", 0xFF00DDFF),
-    FAIR("Fair", 0xFFFFAA00),
-    POOR("Poor", 0xFFFF6644),
-    VERY_POOR("Very Poor", 0xFFFF0000)
+    EXCELLENT("Excellent", 0xFF2E7D32),
+    GOOD("Good", 0xFF00695C),
+    FAIR("Fair", 0xFFB36B00),
+    POOR("Poor", 0xFFC73E1D),
+    VERY_POOR("Very Poor", 0xFFB31E33)
 }

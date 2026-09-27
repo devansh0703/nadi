@@ -10,13 +10,19 @@
 SignalProcessor::SignalProcessor(int bufferSize, float samplingRate)
         : mBufferSize(bufferSize), mSamplingRate(samplingRate) {
 
-    mRawBuffer.reserve(bufferSize);
-    mTimeBuffer.reserve(bufferSize);
+    mRawBuffer.assign(bufferSize, 0.0f);
+    mTimeBuffer.assign(bufferSize, 0L);
 
     // Initialize KissFFT
     mFftCfg = kiss_fft_alloc(bufferSize, 0, nullptr, nullptr);
     mFftIn.resize(bufferSize);
     mFftOut.resize(bufferSize);
+    mWork.resize(bufferSize);
+    // Precompute Hamming window once: cosf per bin was recomputed on every HR call.
+    mWindow.resize(bufferSize);
+    for (int i = 0; i < bufferSize; ++i) {
+        mWindow[i] = 0.54f - 0.46f * cosf((2.0f * M_PI * i) / (bufferSize - 1));
+    }
 }
 
 SignalProcessor::~SignalProcessor() {
@@ -24,17 +30,16 @@ SignalProcessor::~SignalProcessor() {
 }
 
 void SignalProcessor::addSample(float greenValue, long timestamp) {
-    if (mRawBuffer.size() >= mBufferSize) {
-        mRawBuffer.erase(mRawBuffer.begin());
-        mTimeBuffer.erase(mTimeBuffer.begin());
-    }
-    mRawBuffer.push_back(greenValue);
-    mTimeBuffer.push_back(timestamp);
+    // O(1) ring write. Old code did erase(begin) = O(N) memmove at 30 Hz.
+    mRawBuffer[mHead] = greenValue;
+    mTimeBuffer[mHead] = timestamp;
+    mHead = (mHead + 1) % mBufferSize;
+    if (mCount < mBufferSize) ++mCount;
 }
 
 void SignalProcessor::reset() {
-    mRawBuffer.clear();
-    mTimeBuffer.clear();
+    mHead = 0;
+    mCount = 0;
     mPrevHR = 0.0f;
 }
 
@@ -43,7 +48,7 @@ const std::vector<float>& SignalProcessor::getBuffer() const {
 }
 
 int SignalProcessor::getSampleCount() const {
-    return mRawBuffer.size();
+    return mCount;
 }
 
 void SignalProcessor::normalizeBuffer(const std::vector<float>& input, std::vector<float>& output) {
@@ -68,19 +73,25 @@ void SignalProcessor::applyWindow(std::vector<float>& data) {
 }
 
 float SignalProcessor::computeHeartRate() {
-    int N = mRawBuffer.size();
+    int N = mCount;
     if (N < mSamplingRate * 3) {
         return 0.0f;
     }
 
-    // 1. Prepare data
-    std::vector<float> processed;
-    normalizeBuffer(mRawBuffer, processed);
-    applyWindow(processed);
-
-    // 2. Fill FFT input
+    // 1. Linearize ring (oldest->newest) into scratch, mean-subtract + window in one pass.
+    float sum = 0.0f;
+    int oldest = (mHead - mCount + mBufferSize) % mBufferSize;
+    for (int i = 0; i < N; ++i) sum += mRawBuffer[(oldest + i) % mBufferSize];
+    float mean = sum / N;
+    // Window table is sized mBufferSize; scale index when N < mBufferSize.
     for (int i = 0; i < N; ++i) {
-        mFftIn[i].r = processed[i];
+        int wIdx = (int)((int64_t)i * (mBufferSize - 1) / (N - 1 > 0 ? N - 1 : 1));
+        mWork[i] = (mRawBuffer[(oldest + i) % mBufferSize] - mean) * mWindow[wIdx];
+    }
+
+    // 2. Fill FFT input (zero-pad tail once, no per-call vector alloc)
+    for (int i = 0; i < N; ++i) {
+        mFftIn[i].r = mWork[i];
         mFftIn[i].i = 0.0f;
     }
     for (int i = N; i < mBufferSize; ++i) {
@@ -111,7 +122,8 @@ float SignalProcessor::computeHeartRate() {
 
     for (int i = 1; i < mBufferSize / 2; ++i) {
         float freq = (i * mSamplingRate) / mBufferSize;
-        float magnitude = sqrtf(mFftOut[i].r * mFftOut[i].r + mFftOut[i].i * mFftOut[i].i);
+        // Compare power (|X|^2), skip sqrtf per bin (~150 sqrtfs saved per call).
+        float magnitude = mFftOut[i].r * mFftOut[i].r + mFftOut[i].i * mFftOut[i].i;
 
         // Calculate average noise in valid range
         if (freq >= 0.75f && freq <= 3.33f) {
